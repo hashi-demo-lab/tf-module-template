@@ -74,9 +74,9 @@ jobs:
         echo "python_output=$PYTHON_OUT"
       env:
         TFE_HOSTNAME: 'app.terraform.io'
-        TFE_ORG: 'hashi-demos-apj'
-        TFE_MODULE: 'project-team'
-        TFE_PROVIDER: 'tfe'
+        TFE_ORG: ${{ vars.TFE_ORG }}
+        TFE_MODULE: ${{ vars.TFE_MODULE }}
+        TFE_PROVIDER: ${{ vars.TFE_PROVIDER }}
         TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
         COMMIT_SHA: ${{ github.sha }}
         NEW_VERSION: ${{ steps.new-version.outputs.python_output }}
