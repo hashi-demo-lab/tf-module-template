@@ -61,9 +61,9 @@ jobs:
         echo "python_output=$PYTHON_OUT" >> $GITHUB_OUTPUT
       env:
         TFE_HOSTNAME: 'app.terraform.io'
-        TFE_ORG: 'hashi-demos-apj'
-        TFE_MODULE: 'project-team'
-        TFE_PROVIDER: 'tfe'
+        TFE_ORG: ${{ vars.TFE_ORG }}
+        TFE_MODULE: ${{ vars.TFE_MODULE }}
+        TFE_PROVIDER: ${{ vars.TFE_PROVIDER }}
         TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
 
     - name: publish-module-version
