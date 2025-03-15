@@ -1,1 +1,1 @@
-# tf-module-template
+# tf-module-template - this will be automatically managed using terraform-docs
