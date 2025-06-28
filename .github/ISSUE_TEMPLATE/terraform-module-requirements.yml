@@ -59,25 +59,6 @@ body:
     validations:
       required: true
 
-  - type: checkboxes
-    id: resources
-    attributes:
-      label: "🏗️ Infrastructure Resources"
-      description: "Select the types of resources this module will manage"
-      options:
-        - label: "Compute (EC2, VMs, Container instances)"
-        - label: "Networking (VPC, Subnets, Security Groups, Load Balancers)"
-        - label: "Storage (S3, EBS, Blob Storage, Disks)"
-        - label: "Databases (RDS, DynamoDB, CosmosDB, Cloud SQL)"
-        - label: "Security (IAM, Key Vault, Secrets Manager, KMS)"
-        - label: "Monitoring (CloudWatch, Azure Monitor, Cloud Monitoring)"
-        - label: "DNS (Route53, Azure DNS, Cloud DNS)"
-        - label: "CDN (CloudFront, Azure CDN, Cloud CDN)"
-        - label: "Containers (EKS, AKS, GKE, ECS, Container Registry)"
-        - label: "Serverless (Lambda, Functions, Cloud Functions)"
-        - label: "API Gateway"
-        - label: "Message Queues (SQS, Service Bus, Pub/Sub)"
-
   - type: textarea
     id: specific_resources
     attributes:
@@ -146,6 +127,7 @@ body:
       description: "Terraform version and provider constraints"
       placeholder: |
         Example:
+        - Latest is major release, if no dependencies exist, example ~> 6.0
         - Terraform >= 1.5.0
         - AWS Provider >= 5.0.0
         - Must use remote state backend
@@ -192,74 +174,6 @@ body:
         - Shared KMS key for encryption
         - Corporate DNS resolver
         - Existing IAM roles
-
-  - type: checkboxes
-    id: quality_gates
-    attributes:
-      label: "✅ Quality Gates"
-      description: "Quality checks that must pass before module release"
-      options:
-        - label: "Checkov security scan passes"
-        - label: "TFSec security scan passes"
-        - label: "Terrascan security scan passes"
-        - label: "TFLint validation passes"
-        - label: "terraform validate succeeds"
-        - label: "terraform plan runs without errors"
-        - label: "Module documentation auto-generated"
-        - label: "Example configurations provided"
-        - label: "Unit tests implemented"
-        - label: "Integration tests implemented"
-
-  - type: textarea
-    id: testing_requirements
-    attributes:
-      label: "🧪 Testing Requirements"
-      description: "Testing strategy and requirements"
-      placeholder: |
-        Example:
-        - Unit tests with terraform-test
-        - Integration tests with real resources
-        - Example configurations must deploy successfully
-        - Destroy operations must complete cleanly
-        - Performance testing for large deployments
-
-  - type: textarea
-    id: cost_considerations
-    attributes:
-      label: "💰 Cost Considerations"
-      description: "Cost optimization and budget requirements"
-      placeholder: |
-        Example:
-        - NAT Gateway costs for multi-AZ deployment
-        - Data transfer costs between subnets
-        - KMS key usage costs
-        - CloudWatch logs retention costs
-        - Estimated monthly cost range: $X - $Y
-
-  - type: textarea
-    id: operational_requirements
-    attributes:
-      label: "🔧 Operational Requirements"
-      description: "Operational and maintenance considerations"
-      placeholder: |
-        Example:
-        - Monitoring and alerting setup
-        - Backup and recovery procedures
-        - Update and patching strategy
-        - Documentation requirements
-        - Support and maintenance responsibilities
-
-  - type: dropdown
-    id: priority
-    attributes:
-      label: "⚡ Priority Level"
-      description: "Business priority for this module development"
-      options:
-        - High - Critical business need
-        - Medium - Important enhancement
-        - Low - Nice to have
-    validations:
-      required: true
 
   - type: input
     id: target_completion
