@@ -1,14 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-  - name: "📖 Terraform Documentation"
-    url: "https://registry.terraform.io/browse/modules"
-    about: "Browse the official Terraform module registry for existing modules"
+    about: "Browse the official Terraform module registry for existing public modules"
   - name: "🛠️ Terraform Style Guide"
     url: "https://developer.hashicorp.com/terraform/language/style"
     about: "Official guide for Terraform style and best practices"
-  - name: "🔒 Security Best Practices"
-    url: "https://developer.hashicorp.com/terraform/tutorials/configuration-language/sensitive-variables"
-    about: "Learn about Terraform security best practices and sensitive data handling"
-  - name: "💬 Community Discussion"
-    url: "https://discuss.hashicorp.com/c/terraform-core/27"
-    about: "Join the HashiCorp community discussion for general Terraform questions"
+
+  - name: "🤖 Terraform MCP Server"
+    url: "https://github.com/hashicorp/terraform-mcp-server"
+    about: "Terraform MCP Server for managing Terraform modules"
+
+  - name: "🔒 Private Module Registry"
+    url: "https://developer.hashicorp.com/validated-designs/terraform-operating-guides-standardization/private-registry"
+    about: "Private module registry for Terraform modules"
