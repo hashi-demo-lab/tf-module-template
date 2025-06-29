@@ -8,8 +8,8 @@ repos:
         
   - repo: local
     hooks:
-      - id: terraform-test
-        name: Terraform Test
+      - id: terraform_test
+        name: terraform test
         entry: terraform test
         language: system
         pass_filenames: false
