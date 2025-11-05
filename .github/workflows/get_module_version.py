@@ -36,11 +36,8 @@ def get_latest_version(
     Raises:
         SystemExit: If API request fails or no versions exist
     """
-    # Use the v2 API for private registry modules
-    url = (
-        f"https://{tfe_hostname}/api/v2/organizations/{org_name}/"
-        f"registry-modules/private/{org_name}/{module_name}/{provider_name}"
-    )
+    # Use Registry v1 API (works for both public and private modules)
+    url = f"https://{tfe_hostname}/api/registry/v1/modules/{org_name}/{module_name}/{provider_name}/"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/vnd.api+json"
@@ -51,13 +48,7 @@ def get_latest_version(
         response.raise_for_status()
         
         data = response.json()
-        # Extract versions from the data.attributes object
-        module_data = data.get("data", {})
-        attributes = module_data.get("attributes", {})
-        version_statuses = attributes.get("version-statuses", [])
-        
-        # Extract version numbers from version-statuses
-        versions = [v.get("version") for v in version_statuses if v.get("version")]
+        versions = data.get("versions", [])
 
         if not versions:
             # First release - start at 0.1.0
