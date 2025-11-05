@@ -1,77 +1,91 @@
-name: Module Release
+name: 'Module Release'
+
+run-name: 'Release: ${{ github.event.pull_request.title }}'
 
 on:
   pull_request:
     types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
-  Module-Version-Release:
+  publish-module:
+    name: 'Publish Module to Registry'
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
+    
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-    - name: get-labels
+    - name: Get PR Labels
+      id: pr-labels
       uses: snnaplab/get-labels-action@v1
-      
-    - if: contains(fromJSON(env.LABELS), 'semver:major')
-      id: major-release
-      run: | 
-       echo "major release"
-       echo "release=major" >> $GITHUB_OUTPUT
-       
-    - if: contains(fromJSON(env.LABELS), 'semver:minor')
-      id: minor-release
-      run: | 
-       echo "minor release"
-       echo "release=minor" >> $GITHUB_OUTPUT
-       
-    - if: contains(fromJSON(env.LABELS), 'semver:patch')
-      id: patch-release
-      run: | 
-       echo "patch release"
-       echo "release=patch" >> $GITHUB_OUTPUT
 
-    - name: Set Release Type
-      id: set-release-type
+    - name: Determine Release Type
+      id: release-type
       run: |
-        if [ -n "${{ steps.major-release.outputs.release }}" ]; then
-          echo "RELEASE_TYPE=${{ steps.major-release.outputs.release }}" >> $GITHUB_ENV
-        elif [ -n "${{ steps.minor-release.outputs.release }}" ]; then
-          echo "RELEASE_TYPE=${{ steps.minor-release.outputs.release }}" >> $GITHUB_ENV
-        elif [ -n "${{ steps.patch-release.outputs.release }}" ]; then
-          echo "RELEASE_TYPE=${{ steps.patch-release.outputs.release }}" >> $GITHUB_ENV
+        LABELS='${{ env.LABELS }}'
+        
+        if echo "$LABELS" | grep -q '"semver:major"'; then
+          echo "RELEASE_TYPE=major" >> $GITHUB_ENV
+          echo "release=major" >> $GITHUB_OUTPUT
+          echo "📦 Detected MAJOR release (breaking changes)"
+        elif echo "$LABELS" | grep -q '"semver:minor"'; then
+          echo "RELEASE_TYPE=minor" >> $GITHUB_ENV
+          echo "release=minor" >> $GITHUB_OUTPUT
+          echo "✨ Detected MINOR release (new features)"
+        elif echo "$LABELS" | grep -q '"semver:patch"'; then
+          echo "RELEASE_TYPE=patch" >> $GITHUB_ENV
+          echo "release=patch" >> $GITHUB_OUTPUT
+          echo "🐛 Detected PATCH release (bug fixes)"
+        else
+          echo "❌ ERROR: No valid semver label found!"
+          echo "Please add one of: semver:major, semver:minor, semver:patch"
+          exit 1
         fi
 
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.11'
         cache: 'pip'
 
-    - name: install-python-dep
+    - name: Install Python Dependencies
       run: pip install -r ./.github/workflows/requirements.txt
 
-    - name: get-module-version
+    - name: Calculate New Version
       id: new-version
       run: |
-        PYTHON_OUT="$(python ./.github/workflows/get_module_version.py)"
-        echo "python_output=$PYTHON_OUT"
-        echo "python_output=$PYTHON_OUT" >> $GITHUB_OUTPUT
+        echo "🔢 Calculating new version..."
+        NEW_VERSION=$(python ./.github/workflows/get_module_version.py)
+        
+        if [ -z "$NEW_VERSION" ]; then
+          echo "❌ ERROR: Failed to calculate new version"
+          exit 1
+        fi
+        
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "✅ New version will be: $NEW_VERSION"
       env:
         TFE_HOSTNAME: 'app.terraform.io'
         TFE_ORG: ${{ vars.TFE_ORG }}
         TFE_MODULE: ${{ vars.TFE_MODULE }}
         TFE_PROVIDER: ${{ vars.TFE_PROVIDER }}
         TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+        RELEASE_TYPE: ${{ env.RELEASE_TYPE }}
 
-    - name: publish-module-version
-      if: ${{ steps.new-version.outputs.python_output }}
-      id: publish-module
+    - name: Publish Module Version
+      id: publish
       run: |
-        PYTHON_OUT="$(python ./.github/workflows/publish_module_version.py)"
-        echo "python_output=$PYTHON_OUT"
+        echo "📤 Publishing module version ${{ steps.new-version.outputs.new_version }}..."
+        python ./.github/workflows/publish_module_version.py
+        echo "✅ Module published successfully!"
       env:
         TFE_HOSTNAME: 'app.terraform.io'
         TFE_ORG: ${{ vars.TFE_ORG }}
@@ -79,6 +93,18 @@ jobs:
         TFE_PROVIDER: ${{ vars.TFE_PROVIDER }}
         TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
         COMMIT_SHA: ${{ github.sha }}
-        NEW_VERSION: ${{ steps.new-version.outputs.python_output }}
+        NEW_VERSION: ${{ steps.new-version.outputs.new_version }}
+
+    - name: Create Release Summary
+      if: always()
+      run: |
+        echo "## 🚀 Module Release" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Module**: ${{ vars.TFE_ORG }}/${{ vars.TFE_MODULE }}/${{ vars.TFE_PROVIDER }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Version**: ${{ steps.new-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Release Type**: ${{ steps.release-type.outputs.release }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "View in Registry: https://app.terraform.io/app/${{ vars.TFE_ORG }}/registry/modules/private/${{ vars.TFE_ORG }}/${{ vars.TFE_MODULE }}/${{ vars.TFE_PROVIDER }}/${{ steps.new-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
 
         

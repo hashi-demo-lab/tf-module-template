@@ -1,44 +1,121 @@
-name: 'Module_Validate'
+name: 'Module Validate'
+
+run-name: 'Validate: ${{ github.event.pull_request.title || github.ref_name }}'
 
 on:
   pull_request:
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - '**.tftest.hcl'
+      - '.github/workflows/module_validate.yml'
   workflow_dispatch:
 
-permissions: write-all
-
+permissions:
+  contents: write
+  pull-requests: read
 
 jobs:
-  terraform-docs:
-    name: 'Validte_Module'
+  validate-module:
+    name: 'Validate Module'
     runs-on: ubuntu-latest
-    environment: production
-
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    
     defaults:
       run:
         shell: bash
 
     steps:
-    # Checkout the repository to the GitHub Actions runner
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: ${{ github.event.pull_request.head.ref }}
-        
-    - uses: mheap/github-action-required-labels@v5
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Check Required Semantic Version Label
+      uses: mheap/github-action-required-labels@v5
       with:
         mode: exactly
         count: 1
         labels: "semver:patch, semver:minor, semver:major"
-          
-    # terraform-docs
-    - name: Render terraform docs inside the README.md and push changes back to PR branch
-      uses: terraform-docs/gh-actions@v1.0.0
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: latest
+
+    - name: Terraform Format Check
+      id: fmt
+      run: |
+        if ! terraform fmt -check -recursive; then
+          echo "❌ Terraform files are not formatted correctly"
+          echo "Run 'terraform fmt -recursive' locally to fix"
+          exit 1
+        fi
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+
+    - name: Setup TFLint
+      uses: terraform-linters/setup-tflint@v4
+      with:
+        tflint_version: latest
+
+    - name: TFLint
+      id: tflint
+      run: |
+        tflint --init
+        tflint --format compact
+      continue-on-error: true
+
+    - name: Run Trivy Security Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        scan-ref: '.'
+        trivy-config: trivy.yaml
+        exit-code: '0'  # Don't fail the build, just report
+        severity: 'CRITICAL,HIGH'
+
+    - name: Run Unit Tests
+      id: test
+      run: terraform test -filter=tests/unit-tests.tftest.hcl
+      continue-on-error: true
+      env:
+        TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+        TFE_HOSTNAME: "app.terraform.io"
+        # Add other provider credentials as needed:
+        # ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+        # ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        # ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        # ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+        # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    - name: Update Terraform Docs
+      uses: terraform-docs/gh-actions@v1.2.0
       with:
         working-dir: .
         output-file: README.md
         output-method: inject
         git-push: "true"
+
+    - name: Validation Summary
+      if: always()
+      run: |
+        echo "## Validation Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Format | ${{ steps.fmt.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Init | ${{ steps.init.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Validate | ${{ steps.validate.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| TFLint | ${{ steps.tflint.outcome == 'success' && '✅ Passed' || '⚠️ Warnings' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Unit Tests | ${{ steps.test.outcome == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
 
 
 
